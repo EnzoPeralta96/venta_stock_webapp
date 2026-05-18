@@ -1,0 +1,216 @@
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
+
+import { API_BASE } from "@/lib/apiConfig";
+const API_URL = `${API_BASE}/Proveedor`;
+const LP_URL = `${API_BASE}/ListaPrecio`;
+const LP_ITEMS_URL = `${API_BASE}/ProductoListaPrecioProveedor`;
+
+async function parseError(response, defaultMessage) {
+  try {
+    const contentType = response.headers.get("content-type");
+    if (contentType?.includes("application/json")) {
+      const data = await response.json();
+      return data.message || data.error || data.title || defaultMessage;
+    }
+    const text = await response.text();
+    if (text?.trim()) return text;
+  } catch {}
+  return defaultMessage;
+}
+
+export async function fetchProveedores(
+  pageIndex = 1,
+  pageSize = 10,
+  searchTerm = "",
+  estado = "activos"
+) {
+  const url = `${API_URL}/search?pageIndex=${pageIndex}&pageSize=${pageSize}&searchTerm=${encodeURIComponent(searchTerm)}&estado=${estado}`;
+  const res = await fetchWithAuth(url);
+  if (!res.ok) throw new Error(await parseError(res, "Error al obtener los proveedores"));
+  return res.json();
+}
+
+export async function getProveedorById(id) {
+  const res = await fetchWithAuth(`${API_URL}/${id}`);
+  if (!res.ok) throw new Error(await parseError(res, "Error al obtener el proveedor"));
+  return res.json();
+}
+
+export async function createProveedor(data) {
+  const res = await fetchWithAuth(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Error al crear el proveedor"));
+  return res.json();
+}
+
+export async function updateProveedor(data) {
+  const res = await fetchWithAuth(`${API_URL}/update`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Error al actualizar el proveedor"));
+  return res.json();
+}
+
+export async function deleteProveedor(id) {
+  const res = await fetchWithAuth(`${API_URL}/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await parseError(res, "Error al eliminar el proveedor"));
+  return true;
+}
+
+export async function toggleEstadoProveedor(id) {
+  const res = await fetchWithAuth(`${API_URL}/${id}/toggle-estado`, { method: "PATCH" });
+  if (!res.ok) throw new Error(await parseError(res, "Error al cambiar el estado del proveedor"));
+  return true;
+}
+
+// ── Lista de Precios ────────────────────────────────────────────────────────
+
+export async function fetchListasByProveedor(idProveedor) {
+  const res = await fetchWithAuth(`${LP_URL}/proveedor/${idProveedor}`);
+  if (!res.ok) throw new Error(await parseError(res, "Error al obtener las listas"));
+  return res.json();
+}
+
+export async function getListaById(idLista) {
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}`);
+  if (!res.ok) throw new Error(await parseError(res, "Error al obtener la lista"));
+  return res.json();
+}
+
+export async function createLista(data) {
+  const res = await fetchWithAuth(LP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Error al crear la lista"));
+}
+
+export async function updateLista(data) {
+  const res = await fetchWithAuth(LP_URL, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Error al actualizar la lista"));
+}
+
+export async function deleteLista(idLista) {
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await parseError(res, "Error al eliminar la lista"));
+}
+
+export async function toggleActivoLista(idLista) {
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}/toggle-activo`, { method: "PATCH" });
+  if (!res.ok) throw new Error(await parseError(res, "Error al cambiar el estado de la lista"));
+}
+
+// ── Items de Lista ───────────────────────────────────────────────────────────
+
+export async function fetchItemsByLista(idLista) {
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}/items`);
+  if (!res.ok) throw new Error(await parseError(res, "Error al obtener los items"));
+  return res.json();
+}
+
+export async function addItem(idLista, data) {
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Error al agregar el producto"));
+}
+
+export async function updateItem(idLista, idProducto, data) {
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}/items/${idProducto}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Error al actualizar el producto"));
+}
+
+export async function deleteItem(idLista, idProducto) {
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}/items/${idProducto}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(await parseError(res, "Error al quitar el producto"));
+}
+
+export async function addItemsBulk(idLista, items) {
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}/items/bulk`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Error al guardar los productos"));
+  return res.json();
+}
+
+// ── Importación Excel de lista ────────────────────────────────────────────────
+
+export async function importarListaExcel(idLista, file, ivaAplicacion = 0) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("ivaAplicacion", ivaAplicacion);
+  const res = await fetchWithAuth(`${LP_ITEMS_URL}/${idLista}/import`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Error al importar el archivo"));
+  return res.json();
+}
+
+// ── Plantilla + Importación masiva con precio de venta ───────────────────────
+
+export async function descargarPlantillaExcel(idLista, listaNombre) {
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}/items/plantilla-excel`);
+  if (!res.ok) throw new Error(await parseError(res, "Error al descargar la plantilla"));
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `plantilla_${listaNombre ?? idLista}.xlsx`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function importarPlantillaExcel(idLista, file, actualizarPrecioVenta) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("actualizarPrecioVenta", actualizarPrecioVenta ? "true" : "false");
+  const res = await fetchWithAuth(`${LP_URL}/${idLista}/items/import`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) throw new Error(await parseError(res, "Error al importar la plantilla"));
+  return res.json();
+}
+
+// ── Exportación ───────────────────────────────────────────────────────────────
+
+function triggerDownload(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function exportarProveedoresExcel() {
+  const res = await fetchWithAuth(`${API_URL}/export/excel`);
+  if (!res.ok) throw new Error(await parseError(res, "Error al exportar proveedores"));
+  triggerDownload(await res.blob(), "proveedores.xlsx");
+}
+
+export async function exportarProveedoresPdf() {
+  const res = await fetchWithAuth(`${API_URL}/export/pdf`);
+  if (!res.ok) throw new Error(await parseError(res, "Error al exportar proveedores"));
+  triggerDownload(await res.blob(), "proveedores.pdf");
+}
+

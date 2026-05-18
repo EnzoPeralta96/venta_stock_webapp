@@ -1,0 +1,238 @@
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
+
+import { API_BASE } from "@/lib/apiConfig";
+
+const API_URL = `${API_BASE}/Product`;
+
+export async function fetchProductsWithDetails(
+  activo = true,
+  pageIndex = 1,
+  pageSize = 9,
+  search = "",
+  idCategoria = null
+) {
+  let url = `${API_URL}/with-details-paged?activo=${activo}&pageIndex=${pageIndex}&pageSize=${pageSize}`
+
+  if (search && search.trim() !== "") {
+    url += `&search=${encodeURIComponent(search)}`
+  }
+
+  if (idCategoria) {
+    url += `&idCategoria=${idCategoria}`
+  }
+
+  const response = await fetchWithAuth(url)
+
+  if (!response.ok) {
+    throw new Error("Error al obtener los productos")
+  }
+
+  const data = await response.json()
+
+  return {
+    ...data,
+    items: data.items.map((p, index) => ({
+      ...p,
+      id: p.idProducto ?? p.productId ?? p.Id ?? index,
+    })),
+  }
+}
+
+export async function createProduct(producto) {
+  const response = await fetchWithAuth(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(producto),
+  });
+
+  if (!response.ok) {
+    throw new Error("Error al crear producto");
+  }
+
+  const data = await response.json();
+
+  return {
+    ...data,
+    id: data.idProducto ?? data.productId ?? data.Id, // normalizamos
+  };
+}
+export async function updateProduct(producto) {
+  const id = producto.idProducto ?? producto.id ?? producto.productId ?? producto.Id;
+  if (!id) throw new Error("updateProduct: id requerido");
+
+  const url = `${API_URL}/update`;
+  const headers = { "Content-Type": "application/json" };
+  const body = JSON.stringify(producto);
+
+  const res = await fetchWithAuth(url, { method: "PUT", headers, body });
+  if (!res.ok) {
+    throw new Error(`PUT ${url} -> ${res.status} ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return {
+    ...data,
+    id: data.idProducto ?? id,
+  };
+}
+
+export async function deleteProduct(id) {
+  if (!id) throw new Error("deleteProduct: id requerido");
+  const url = `${API_URL}/${id}`;
+  const res = await fetchWithAuth(url, { method: "DELETE" });
+  if (!res.ok) {
+    throw new Error(`DELETE ${url} -> ${res.status} ${res.statusText}`);
+  }
+  return true;
+}
+
+export async function toggleProductEstado(id) {
+  if (!id) throw new Error("toggleProductEstado: id requerido");
+
+  const url = `${API_URL}/${id}/toggle-estado`;
+  const res = await fetchWithAuth(url, { method: "PATCH" });
+
+  if (!res.ok) {
+    throw new Error(`PATCH ${url} -> ${res.status} ${res.statusText}`);
+  }
+
+  const data = await res.json(); // { idProducto, activo }
+
+  return {
+    id: data.idProducto ?? id,
+    activo: data.activo,
+  };
+}
+
+export async function descargarPlantillaCsv() {
+  const url = `${API_URL}/export/plantilla-csv`;
+  const res = await fetchWithAuth(url);
+
+  if (!res.ok) {
+    throw new Error(`Error al descargar plantilla CSV: ${res.status} ${res.statusText}`);
+  }
+
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = "plantilla_productos.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export async function descargarPlantillaExcel() {
+  const url = `${API_URL}/export/plantilla-excel`;
+  const res = await fetchWithAuth(url);
+
+  if (!res.ok) {
+    throw new Error(`Error al descargar plantilla Excel: ${res.status} ${res.statusText}`);
+  }
+
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = "plantilla_productos.xlsx";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export async function importarProductos(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const url = `${API_URL}/importar`;
+  const res = await fetchWithAuth(url, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Error al importar productos: ${res.status} ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return data; // { productosCreados, productosActualizados, errores }
+}
+
+export async function exportarProductosCsv() {
+  const url = `${API_URL}/export/csv`;
+  const res = await fetchWithAuth(url);
+
+  if (!res.ok) {
+    throw new Error(`Error al exportar productos CSV: ${res.status} ${res.statusText}`);
+  }
+
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = "productos.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+export async function exportarProductosExcel() {
+  const url = `${API_URL}/export/excel`;
+  const res = await fetchWithAuth(url);
+
+  if (!res.ok) {
+    throw new Error(`Error al exportar productos Excel: ${res.status} ${res.statusText}`);
+  }
+
+  const blob = await res.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = "productos.xlsx";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+// ── Actualización masiva de precios ──────────────────────────────────────────
+
+function triggerDownload(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+export async function descargarPlantillaPrecios() {
+  const res = await fetchWithAuth(`${API_URL}/plantilla-precios`);
+  if (!res.ok) throw new Error("Error al descargar la plantilla");
+  triggerDownload(await res.blob(), "plantilla_precios.xlsx");
+}
+
+export async function actualizarMasivoManual(items) {
+  const res = await fetchWithAuth(`${API_URL}/actualizar-masivo/manual`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function actualizarMasivoExcel(file, ivaDefecto = 21) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("ivaDefecto", String(ivaDefecto));
+  const res = await fetchWithAuth(`${API_URL}/actualizar-masivo/excel`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
