@@ -59,8 +59,8 @@ export default function CreateAccountForm({ open, onClose, onSubmit }) {
     }
 
     const saldo = parseFloat(formData.saldoActual);
-    if (formData.tieneDueda && (isNaN(saldo) || saldo <= 0)) {
-      newErrors.saldoActual = "Si tiene deuda, el saldo actual debe ser mayor a 0";
+    if (formData.tieneDueda && (isNaN(saldo) || saldo === 0)) {
+      newErrors.saldoActual = "El saldo inicial no puede ser cero";
     }
 
 
@@ -184,7 +184,7 @@ export default function CreateAccountForm({ open, onClose, onSubmit }) {
             {/* Tiene Deuda */}
             <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
               <Label htmlFor="tieneDueda" className="flex-1 cursor-pointer">
-                ¿Tiene deuda?
+                ¿Registrar saldo inicial?
               </Label>
               <Switch
                 id="tieneDueda"
@@ -199,7 +199,7 @@ export default function CreateAccountForm({ open, onClose, onSubmit }) {
             {formData.tieneDueda && (
               <div className="space-y-2">
                 <Label htmlFor="saldoActual">
-                  Saldo Actual <span className="text-destructive">*</span>
+                  Saldo Inicial <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="saldoActual"
@@ -216,7 +216,7 @@ export default function CreateAccountForm({ open, onClose, onSubmit }) {
                   <p className="text-sm text-destructive">{errors.saldoActual}</p>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Si tiene deuda, el saldo debe ser mayor a 0
+                  Positivo = deuda del cliente · Negativo = saldo a favor del cliente
                 </p>
               </div>
             )}

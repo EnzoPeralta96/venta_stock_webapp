@@ -316,7 +316,7 @@ export default function ClientCurrentAccountTab({ cliente, clientId, onAccountCr
         open={consumoParaAjuste !== null}
         onClose={() => setConsumoParaAjuste(null)}
         clientId={parseInt(clientId)}
-        currentBalance={latest?.saldoActual ?? 0}
+        currentBalance={saldoActual}
         idVenta={consumoParaAjuste?.idVenta}
         codigoVenta={consumoParaAjuste?.codigoVenta}
         onMovementRegistered={() => {
@@ -329,7 +329,7 @@ export default function ClientCurrentAccountTab({ cliente, clientId, onAccountCr
         open={showManageMovementForm}
         onClose={() => setShowManageMovementForm(false)}
         clientId={parseInt(clientId)}
-        currentBalance={latest?.saldoActual ?? 0}
+        currentBalance={saldoActual}
         limiteTotal={limiteTotal}
         onMovementRegistered={handleMovementRegistered}
         onModificarLimite={() => setShowUpdateLimitModal(true)}
